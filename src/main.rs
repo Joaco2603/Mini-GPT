@@ -111,4 +111,98 @@ fn main() {
     }
 
     println!("{:?}", matrix_matrix_mul(&a, &b));
+
+    let embeddings = vec![
+        vec![0.2, 0.5, -0.1], // gato
+        vec![0.8, -0.2, 0.4], // come
+        vec![0.1, 0.7, 0.3],  // pez
+        // vec![0.9, 0.1, -0.5], // perro
+    ];
+
+    let token_ids: Vec<usize> = vec![0, 1, 2];
+
+    fn embedding_lookup(
+        embeddings: &Vec<Vec<f64>>,
+        token_ids: &Vec<usize>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        let mut output: Vec<Vec<f64>> = Vec::new();
+
+        for i in 0..token_ids.len() {
+            if token_ids[i] >= embeddings.len() {
+                return Err("Bound overflow in memory");
+            }
+            output.push(embeddings[token_ids[i]].clone());
+        }
+
+        Ok(output)
+    }
+
+    println!("{:?}", embedding_lookup(&embeddings, &token_ids));
+
+    let positions = vec![
+        vec![0.01, 0.02, 0.03],
+        vec![0.04, 0.05, 0.06],
+        vec![0.07, 0.08, 0.09],
+    ];
+
+    fn add_matriz(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>, &'static str> {
+        if a.len() != b.len() {
+            return Err("Different number of rows");
+        }
+
+        if a[0].len() != b[0].len() {
+            return Err("Different number of columns");
+        }
+
+        let mut output:Vec<Vec<f64>> = Vec::new();
+
+        for i in 0..a.len() {
+            let mut row: Vec<f64> = Vec::new();
+            for j in 0..a[0].len(){
+                row.push(a[i][j] + b[i][j]);
+            }
+            output.push(row);
+        }
+
+        Ok(output)
+    }
+
+    println!("{:?}",add_matriz(&embeddings, &positions));
+
+    // fn ln(x: f64)-> f64{
+    //     if x<= 0.0 {
+    //         return f64::NAN;
+    //     }
+
+    //     let mut x = x;
+    //     let mut k = 0;
+
+    //     while x > 2.0{
+    //         x/=2.0;
+    //         k+=1;
+    //     }
+    //     while x < 0.5{
+    //         x*=2.0;
+    //         k-=1;
+    //     }
+
+
+    // }
+
+    fn positional_angle(
+        pos: usize,
+        i: usize,
+        d_model: usize
+    )->f64{
+        let mut output: Vec<Vec<f64>> = Vec::new();
+        let mut angle:  f64 = 0.0;
+        let mut sin:    f64 = 0.0;
+        let mut cos:    f64 = 0.0;
+        let mut nominator:   usize = 0;
+        let mut denominator: f64 = 0.0;
+
+        denominator = power(10000,(2.0 * i as f64 / d_model as f64));
+        angle = pos as f64 / denominator;
+        angle
+    }
 }
