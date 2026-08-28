@@ -207,6 +207,48 @@ fn main() {
         (2.0 * sum) + (k as f64 * 0.6931471805599453) // 0.693... ≈ ln(2)
     }
 
+    fn abs(val: f64)->f64{
+        if val < 0.0{
+            -val
+        }else{
+            val
+        }
+    }
+
+    fn exp(x: f64) -> f64 {
+        // 1. Edge case handling according to the IEEE 754 standard
+        if x.is_nan() { return f64::NAN; }
+        if x > 709.782712893384 { return f64::INFINITY; } // Prevents f64 overflow
+        if x < -708.3964185322641 { return 0.0; }         // Prevents underflow (flushes to 0.0)
+    
+        // Precalculated log2(e) constant
+        const LOG2_E: f64 = 1.4426950408889634;
+    
+        // 2. Argument reduction to base 2: x * log2(e) = k + r
+        let z = x * LOG2_E;
+        let k = z.round();     // Integer part (exponent power of 2)
+        let r_z = z - k;       // Base-2 remainder (-0.5 <= r_z <= 0.5)
+    
+        // 3. Convert remainder back to base e: r = r_z * ln(2)
+        const LN_2: f64 = 0.6931471805599453;
+        let r = r_z * LN_2;
+    
+        // 4. Optimized Taylor series for e^r
+        // Since |r| <= ~0.346, 13 terms guarantee maximum double-precision accuracy
+        let mut sum = 1.0;
+        let mut term = 1.0;
+        for i in 1..=13 {
+            term *= r / (i as f64);
+            sum += term;
+        }
+    
+        // 5. Final reconstruction: sum * 2^k
+        // f64::from_bits manipulates the IEEE 754 exponent bits directly in hardware
+        let scale = f64::from_bits(((k as i64 + 1023) as u64) << 52);
+        
+        sum * scale
+    }
+
     fn positional_angle(pos: usize, i: usize, d_model: usize) -> f64 {
         let mut output: Vec<Vec<f64>> = Vec::new();
         let mut angle: f64 = 0.0;
