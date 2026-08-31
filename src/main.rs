@@ -341,5 +341,128 @@ fn main() {
         output
     }
 
+    fn positional_encoding_matrix(seq_len: usize, d_model: usize) -> Vec<Vec<f64>> {
+        let mut output: Vec<Vec<f64>> = Vec::new();
 
+        for pos in 0..seq_len {
+            output.push(positional_encoding(pos, d_model));
+        }
+
+        output
+    }
+
+    let token_embeddings = embedding_lookup(&embeddings, &token_ids).unwrap();
+
+    let positions = positional_encoding_matrix(token_ids.len(), embeddings[0].len());
+
+    // falta una línea
+
+    let x = match add_matriz(&token_embeddings, &positions) {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+
+    println!("{:?}", x);
+
+    fn transpose(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+        let rows = matrix.len();
+        let cols = matrix[0].len();
+
+        let mut output: Vec<Vec<f64>> = Vec::new();
+
+        for i in 0..cols {
+            let mut row = Vec::new();
+
+            for j in 0..rows {
+                row.push(matrix[j][i]);
+            }
+            output.push(row);
+        }
+        output
+    }
+
+    let q = vec![
+        vec![1.0, 0.0, 1.0, 0.0], // Q token 0
+        vec![0.0, 1.0, 1.0, 0.0], // Q token 1
+        vec![1.0, 1.0, 0.0, 1.0], // Q token 2
+    ];
+
+    let k = vec![
+        vec![1.0, 0.0, 1.0, 0.0], // K token 0
+        vec![0.0, 1.0, 0.0, 1.0], // K token 1
+        vec![1.0, 1.0, 0.0, 0.0], // K token 2
+    ];
+
+    let k_t = transpose(&k);
+
+    let scores = matrix_matrix_mul(&q, &k_t).unwrap();
+
+    println!("Kᵀ: {:?}", k_t);
+    println!("QKᵀ: {:?}", scores);
+
+    fn scale_matrix(matrix: &Vec<Vec<f64>>, scalar: f64) -> Vec<Vec<f64>> {
+        let mut output = Vec::new();
+
+        for i in 0..matrix.len() {
+            let mut row = Vec::new();
+
+            for j in 0..matrix[0].len() {
+                row.push(matrix[i][j] / scalar);
+            }
+            output.push(row);
+        }
+
+        output
+    }
+
+    let d_k = q[0].len();
+    let scale = (d_k as f64).sqrt();
+    let scaled_scores = scale_matrix(&scores, scale);
+
+    const EULER: f64 = std::f64::consts::E;
+
+    fn softmax(vector: &Vec<f64>) -> Vec<f64> {
+        let mut denominator: f64 = 0.0;
+        let mut output: Vec<f64> = Vec::new();
+        for i in 0..vector.len() {
+            denominator += power(EULER, vector[i]);
+        }
+
+        for i in 0..vector.len() {
+            let numerator = power(EULER, vector[i]);
+            output.push(numerator / denominator);
+        }
+
+        output
+    }
+
+    softmax(&vec![1.0, 0.0, 0.5]);
+
+    for i in 0..scaled_scores.len() {
+        softmax(&scaled_scores[i]);
+    }
+
+    let mut attention_weights: Vec<Vec<f64>> = Vec::new();
+
+    for i in 0..scaled_scores.len() {
+        let row = softmax(&scaled_scores[i]);
+        attention_weights.push(row);
+    }
+
+    let v = vec![
+        vec![1.0, 0.0, 2.0, 0.0], // V token 0
+        vec![0.0, 2.0, 0.0, 1.0], // V token 1
+        vec![1.0, 1.0, 0.0, 2.0], // V token 2
+    ];
+
+    matrix_matrix_mul(&attention_weights, &v);
+
+    let w_q = vec![
+        vec![0.1, 0.2, 0.3],
+        vec![0.4, 0.5, 0.6],
+        vec![0.7, 0.8, 0.9],
+    ];
 }
