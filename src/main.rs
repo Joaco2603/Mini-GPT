@@ -294,15 +294,52 @@ fn main() {
     }
 
     fn positional_angle(pos: usize, i: usize, d_model: usize) -> f64 {
-        let mut output: Vec<Vec<f64>> = Vec::new();
         let mut angle: f64 = 0.0;
-        let mut sin: f64 = 0.0;
-        let mut cos: f64 = 0.0;
-        let mut nominator: usize = 0;
         let mut denominator: f64 = 0.0;
 
         denominator = power(10000.0, (2.0 * i as f64 / d_model as f64));
         angle = pos as f64 / denominator;
         angle
     }
+
+    println!("{}", positional_angle(5, 0, 8));
+    println!("{}", positional_angle(5, 1, 8));
+    println!("{}", positional_angle(5, 2, 8));
+    println!("{}", positional_angle(5, 3, 8));
+
+    const PI: f64 = std::f64::consts::PI;
+    const TWO_PI: f64 = std::f64::consts::TAU;
+    const HALF_PI: f64 = std::f64::consts::FRAC_PI_2;
+
+    #[inline]
+    pub fn sin(angle: f64) -> f64 {
+        let mut x = angle % TWO_PI;
+        if x > PI {
+            x -= TWO_PI;
+        } else {
+            x += TWO_PI;
+        }
+        let x2 = x * x;
+        x * (1.0 - x2 * (1.0 / 6.0 - x2 * (1.0 / 120.0 - x2 * (1.0 / 5040.0 - x2 / 362880.0))))
+    }
+
+    #[inline]
+    pub fn cos(angle: f64) -> f64 {
+        sin(angle + (PI / 2.0))
+    }
+
+    fn positional_encoding(pos: usize, d_model: usize) -> Vec<f64> {
+        let mut output: Vec<f64> = Vec::new();
+
+        for i in 0..(d_model / 2) {
+            let angle = positional_angle(pos, i, d_model);
+
+            output.push(sin(angle));
+            output.push(cos(angle));
+        }
+
+        output
+    }
+
+
 }
