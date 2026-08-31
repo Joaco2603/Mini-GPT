@@ -465,4 +465,48 @@ fn main() {
         vec![0.4, 0.5, 0.6],
         vec![0.7, 0.8, 0.9],
     ];
+    
+    let w_k = vec![
+        vec![0.2, -0.1, 0.4],
+        vec![0.5, 0.3, -0.2],
+        vec![-0.3, 0.6, 0.1],
+    ];
+    
+    let w_v = vec![
+        vec![0.4, 0.1, -0.2],
+        vec![-0.1, 0.5, 0.3],
+        vec![0.2, -0.4, 0.6],
+    ];
+    
+    let q = matrix_matrix_mul(&x, &w_q).unwrap();
+    let k = matrix_matrix_mul(&x, &w_k).unwrap();
+    let v = matrix_matrix_mul(&x, &w_v).unwrap();
+
+    // 1. Kᵀ
+    let k_t = transpose(&k);
+
+    // 2. QKᵀ
+    let scores = matrix_matrix_mul(&q, &k_t).unwrap();
+
+    // 3. / √d_k
+    let d_k = q[0].len();
+    let scale = (d_k as f64).sqrt();
+
+    let scaled_scores = scale_matrix(&scores, scale);
+
+    // 4. Softmax fila por fila
+    let mut attention_weights: Vec<Vec<f64>> = Vec::new();
+
+    for i in 0..scaled_scores.len() {
+        let row = softmax(&scaled_scores[i]);
+        attention_weights.push(row);
+    }
+
+    // 5. × V
+    let attention_output =
+    matrix_matrix_mul(&attention_weights, &v).unwrap();
+
+    println!("Attention: {:?}", attention_output);
+
+    
 }
