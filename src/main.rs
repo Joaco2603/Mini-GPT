@@ -465,19 +465,19 @@ fn main() {
         vec![0.4, 0.5, 0.6],
         vec![0.7, 0.8, 0.9],
     ];
-    
+
     let w_k = vec![
         vec![0.2, -0.1, 0.4],
         vec![0.5, 0.3, -0.2],
         vec![-0.3, 0.6, 0.1],
     ];
-    
+
     let w_v = vec![
         vec![0.4, 0.1, -0.2],
         vec![-0.1, 0.5, 0.3],
         vec![0.2, -0.4, 0.6],
     ];
-    
+
     let q = matrix_matrix_mul(&x, &w_q).unwrap();
     let k = matrix_matrix_mul(&x, &w_k).unwrap();
     let v = matrix_matrix_mul(&x, &w_v).unwrap();
@@ -503,10 +503,81 @@ fn main() {
     }
 
     // 5. × V
-    let attention_output =
-    matrix_matrix_mul(&attention_weights, &v).unwrap();
+    let attention_output = matrix_matrix_mul(&attention_weights, &v).unwrap();
 
     println!("Attention: {:?}", attention_output);
 
-    
+    // seq_len = 3
+    // d_model = 4
+    // heads = 2
+
+    let x = vec![
+        vec![0.2, 0.5, -0.1, 0.4],
+        vec![0.8, -0.2, 0.4, 0.1],
+        vec![0.1, 0.7, 0.3, -0.5],
+    ];
+
+    let w_q1 = vec![
+        vec![0.1, 0.1],
+        vec![0.3, 0.5],
+        vec![0.3, 0.6],
+        vec![0.9, -0.2],
+    ];
+
+    let w_k1 = vec![
+        vec![0.1, 0.2],
+        vec![0.4, 0.5],
+        vec![0.7, 0.8],
+        vec![0.3, -0.2],
+    ];
+
+    let w_v1 = vec![
+        vec![0.1, -0.2],
+        vec![0.6, 0.5],
+        vec![0.5, 0.8],
+        vec![0.9, -0.2],
+    ];
+
+    let q1 = matrix_matrix_mul(&x, &w_q1).unwrap();
+    let k1 = matrix_matrix_mul(&x, &w_k1).unwrap();
+    let v1 = matrix_matrix_mul(&x, &w_v1).unwrap();
+
+    let k1_t = transpose(&k1);
+    let scores1 = matrix_matrix_mul(&q1, &k1_t).unwrap();
+
+    let d_head = q1[0].len();
+    let scale = (d_head as f64).sqrt();
+
+    let scaled_scores1 = scale_matrix(&scores1, scale);
+
+    let mut attention_weights1 = Vec::new();
+
+    for i in 0..scaled_scores1.len() {
+        attention_weights1.push(softmax(&scaled_scores1[i]));
+    }
+
+    fn attention_head(
+        x: &Vec<Vec<f64>>,
+        w_q: &Vec<Vec<f64>>,
+        w_k: &Vec<Vec<f64>>,
+        w_v: &Vec<Vec<f64>>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        let q = matrix_matrix_mul(x, w_q)?;
+        let k = matrix_matrix_mul(x, w_k)?;
+        let v = matrix_matrix_mul(x, w_v)?;
+
+        let k_t = transpose(&k);
+        let scores = matrix_matrix_mul(&q, &k_t)?;
+
+        let d_head = q[0].len();
+        let scale = (d_head as f64).sqrt();
+        let scaled_scores = scale_matrix(&scores, scale);
+
+        let mut attention_weights = Vec::new();
+        for i in 0..scaled_scores.len() {
+            attention_weights.push(softmax(&scaled_scores[i]));
+        }
+
+        matrix_matrix_mul(&attention_weights, &v)
+    }
 }
