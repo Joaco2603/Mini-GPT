@@ -538,6 +538,35 @@ fn main() {
         vec![0.9, -0.2],
     ];
 
+    let w_q2 = vec![
+        vec![-0.2, 0.3],
+        vec![0.5, -0.1],
+        vec![0.2, 0.4],
+        vec![-0.4, 0.7],
+    ];
+
+    let w_k2 = vec![
+        vec![0.3, -0.1],
+        vec![0.2, 0.6],
+        vec![-0.5, 0.3],
+        vec![0.8, 0.1],
+    ];
+
+    let w_v2 = vec![
+        vec![-0.3, 0.4],
+        vec![0.4, -0.3],
+        vec![0.7, 0.2],
+        vec![-0.1, 0.5],
+    ];
+
+    // d_model × d_model → proyecta la concatenación de heads de vuelta a d_model
+    let w_o = vec![
+        vec![0.2, -0.1, 0.3, 0.4],
+        vec![0.5, 0.2, -0.3, 0.1],
+        vec![-0.2, 0.6, 0.4, -0.1],
+        vec![0.1, 0.3, 0.2, 0.5],
+    ];
+
     let q1 = matrix_matrix_mul(&x, &w_q1).unwrap();
     let k1 = matrix_matrix_mul(&x, &w_k1).unwrap();
     let v1 = matrix_matrix_mul(&x, &w_v1).unwrap();
@@ -554,6 +583,35 @@ fn main() {
 
     for i in 0..scaled_scores1.len() {
         attention_weights1.push(softmax(&scaled_scores1[i]));
+    }
+
+    fn concat_heads(
+        head1: &Vec<Vec<f64>>,
+        head2: &Vec<Vec<f64>>,
+    ) -> Vec<Vec<f64>> {
+        let mut output = Vec::with_capacity(head1.len());
+    
+        for i in 0..head1.len() {
+            // Acceso seguro a la fila de head1
+            let row1 = match head1.get(i) {
+                Some(r) => r.as_slice(),
+                None => &[],
+            };
+    
+            // Acceso seguro a la fila de head2
+            let row2 = match head2.get(i) {
+                Some(r) => r.as_slice(),
+                None => &[],
+            };
+    
+            let mut row = Vec::with_capacity(row1.len() + row2.len());
+            row.extend_from_slice(row1);
+            row.extend_from_slice(row2);
+    
+            output.push(row);
+        }
+    
+        output
     }
 
     fn attention_head(
