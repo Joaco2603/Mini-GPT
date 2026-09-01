@@ -567,24 +567,6 @@ fn main() {
         vec![0.1, 0.3, 0.2, 0.5],
     ];
 
-    let q1 = matrix_matrix_mul(&x, &w_q1).unwrap();
-    let k1 = matrix_matrix_mul(&x, &w_k1).unwrap();
-    let v1 = matrix_matrix_mul(&x, &w_v1).unwrap();
-
-    let k1_t = transpose(&k1);
-    let scores1 = matrix_matrix_mul(&q1, &k1_t).unwrap();
-
-    let d_head = q1[0].len();
-    let scale = (d_head as f64).sqrt();
-
-    let scaled_scores1 = scale_matrix(&scores1, scale);
-
-    let mut attention_weights1 = Vec::new();
-
-    for i in 0..scaled_scores1.len() {
-        attention_weights1.push(softmax(&scaled_scores1[i]));
-    }
-
     fn concat_heads(
         head1: &Vec<Vec<f64>>,
         head2: &Vec<Vec<f64>>,
@@ -638,4 +620,9 @@ fn main() {
 
         matrix_matrix_mul(&attention_weights, &v)
     }
+
+    let head1 = attention_head(&x, &w_q1, &w_k1, &w_v1).unwrap();
+    let head2 = attention_head(&x, &w_q2, &w_k2, &w_v2).unwrap();
+    let concatenated = concat_heads(&head1, &head2);
+
 }
