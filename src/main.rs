@@ -754,9 +754,9 @@ fn main() {
 
     fn relu(vector: &Vec<f64>) -> Vec<f64> {
         let mut output = Vec::new();
-        // recorre cada valor
-        // si es mayor que 0, lo conservas
-        // si no, guardas 0.0
+        // iterate over each value
+        // if greater than 0, keep it
+        // otherwise, store 0.0
         for i in 0..vector.len(){
             if(vector[i] < 0.0){
                 output[i] = 0.0;
