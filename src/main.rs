@@ -701,4 +701,52 @@ fn main() {
 
         Ok(output)
     }
+
+    let gamma = [1.0, 1.0, 1.0, 1.0];
+    let beta = [0.0, 0.0, 0.0, 0.0];
+
+    fn scale_and_shift(
+        normalized: &Vec<f64>,
+        gamma: &Vec<f64>,
+        beta: &Vec<f64>,
+    ) -> Result<Vec<f64>, &'static str> {
+        if normalized.len() != gamma.len() || normalized.len() != beta.len() {
+            return Err("Gamma, beta and normalized must have the same dimensions");
+        }
+
+        let mut output = Vec::new();
+
+        for i in 0..normalized.len(){
+            output.push(gamma[i]*normalized[i]+beta[i])
+        }
+
+        Ok(output)
+    }
+
+    fn layer_norm(
+        vector: &Vec<f64>,
+        gamma: &Vec<f64>,
+        beta: &Vec<f64>,
+    ) -> Result<Vec<f64>, &'static str> {
+        // 1. normaliza vector usando normalize()
+        let normalized = normalize(vector)?;
+        // 2. aplica scale_and_shift()
+        // 3. devuelve resultado
+        scale_and_shift(&normalized, gamma, beta)
+    }
+
+    fn layer_norm_matrix(
+        matrix: &Vec<Vec<f64>>,
+        gamma: &Vec<f64>,
+        beta: &Vec<f64>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        let mut output = Vec::new();
+    
+        // recorrer cada fila/token
+        for i in 0..matrix.len(){
+            output.push(layer_norm(&matrix[i], gamma, beta)?);
+        }
+    
+        Ok(output)
+    }
 }
