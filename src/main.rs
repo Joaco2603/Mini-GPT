@@ -567,32 +567,29 @@ fn main() {
         vec![0.1, 0.3, 0.2, 0.5],
     ];
 
-    fn concat_heads(
-        head1: &Vec<Vec<f64>>,
-        head2: &Vec<Vec<f64>>,
-    ) -> Vec<Vec<f64>> {
+    fn concat_heads(head1: &Vec<Vec<f64>>, head2: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
         let mut output = Vec::with_capacity(head1.len());
-    
+
         for i in 0..head1.len() {
             // Acceso seguro a la fila de head1
             let row1 = match head1.get(i) {
                 Some(r) => r.as_slice(),
                 None => &[],
             };
-    
+
             // Acceso seguro a la fila de head2
             let row2 = match head2.get(i) {
                 Some(r) => r.as_slice(),
                 None => &[],
             };
-    
+
             let mut row = Vec::with_capacity(row1.len() + row2.len());
             row.extend_from_slice(row1);
             row.extend_from_slice(row2);
-    
+
             output.push(row);
         }
-    
+
         output
     }
 
@@ -625,4 +622,62 @@ fn main() {
     let head2 = attention_head(&x, &w_q2, &w_k2, &w_v2).unwrap();
     let concatenated = concat_heads(&head1, &head2);
 
+    let multihead_output = matrix_matrix_mul(&concatenated, &w_o).unwrap();
+
+    let residual1 = add_matriz(&x, &multihead_output).unwrap();
+
+    fn mean(vector: &Vec<f64>) -> Result<f64, &'static str> {
+        if vector.is_empty() {
+            return Err("Invalid operation: cannot compute mean of an empty vector");
+        }
+
+        let mut output: f64 = 0.0;
+
+        for i in 0..vector.len() {
+            output += vector[i];
+        }
+
+        Ok(output / vector.len() as f64)
+    }
+
+    let x = vec![2.0, 4.0, 6.0, 8.0];
+
+    println!("{}", mean(&x).unwrap());
+
+    fn variance(vector: &Vec<f64>) -> Result<f64, &'static str> {
+        if vector.is_empty() {
+            return Err("Invalid operation: cannot compute variance of an empty vector");
+        }
+
+        // Population variance: (1/n) * sum((xi - mean)^2)
+        let m = mean(vector)?;
+
+        let mut sum_squared_diff = 0.0;
+
+        // Iterate each value, subtract the mean, and accumulate the squared difference
+        for i in 0..vector.len() {
+            let diff = vector[i] - m;
+            sum_squared_diff += power(diff, 2.0);
+        }
+
+        Ok(sum_squared_diff / vector.len() as f64)
+    }
+
+    fn sqrt(x: f64) -> Result<f64, &'static str> {
+        if x.is_nan() {
+            return Err("Invalid operation: cannot compute square root of NaN");
+        }
+        if x < 0.0 {
+            return Err("Invalid operation: cannot compute square root of a negative number");
+        }
+
+        // Square root via exponentiation: x^(1/2)
+        Ok(power(x, 0.5))
+    }
+
+    fn std_dev(vector: &Vec<f64>) -> Result<f64, &'static str> {
+        // Population standard deviation is the square root of the population variance
+        let var = variance(vector)?;
+        sqrt(var)
+    }
 }
