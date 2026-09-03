@@ -559,7 +559,7 @@ fn main() {
         vec![-0.1, 0.5],
     ];
 
-    // d_model × d_model → proyecta la concatenación de heads de vuelta a d_model
+    // d_model × d_model: projects the concatenated heads back to d_model
     let w_o = vec![
         vec![0.2, -0.1, 0.3, 0.4],
         vec![0.5, 0.2, -0.3, 0.1],
@@ -571,13 +571,13 @@ fn main() {
         let mut output = Vec::with_capacity(head1.len());
 
         for i in 0..head1.len() {
-            // Acceso seguro a la fila de head1
+            // Safe row access for head1
             let row1 = match head1.get(i) {
                 Some(r) => r.as_slice(),
                 None => &[],
             };
 
-            // Acceso seguro a la fila de head2
+            // Safe row access for head2
             let row2 = match head2.get(i) {
                 Some(r) => r.as_slice(),
                 None => &[],
@@ -679,5 +679,26 @@ fn main() {
         // Population standard deviation is the square root of the population variance
         let var = variance(vector)?;
         sqrt(var)
+    }
+
+    // Layer normalization for a single vector: (x - mean) / sqrt(variance + epsilon)
+    fn normalize(vector: &Vec<f64>) -> Result<Vec<f64>, &'static str> {
+        let mut output = Vec::new();
+
+        // Small constant to avoid division by zero when variance is near zero
+        let epsilon = 1e-5;
+
+        let m = mean(vector)?;
+        let var = variance(vector)?;
+
+        // Scale factor: sqrt(population variance + epsilon)
+        let denominator = sqrt(var + epsilon)?;
+
+        for i in 0..vector.len() {
+            // Normalize each element around the mean
+            output.push((vector[i] - m) / denominator);
+        }
+
+        Ok(output)
     }
 }
