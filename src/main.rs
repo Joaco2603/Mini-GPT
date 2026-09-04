@@ -767,4 +767,20 @@ fn main() {
 
         output
     }
+
+    fn sigmoid(vector: &Vec<f64>)->Vec<f64>{
+        let mut output = Vec::new();
+
+        for i in 0..vector.len(){
+            output.push(1.0 / (1.0 + power(EULER, -vector[i])));
+        }
+
+        output
+    }
+
+    fn relu_derivative(x: f64) -> f64 {
+        // you will implement this
+        todo!()
+    }
+
 }
