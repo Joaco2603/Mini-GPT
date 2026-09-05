@@ -718,8 +718,8 @@ fn main() {
 
         let mut output = Vec::new();
 
-        for i in 0..normalized.len(){
-            output.push(gamma[i]*normalized[i]+beta[i])
+        for i in 0..normalized.len() {
+            output.push(gamma[i] * normalized[i] + beta[i])
         }
 
         Ok(output)
@@ -743,12 +743,12 @@ fn main() {
         beta: &Vec<f64>,
     ) -> Result<Vec<Vec<f64>>, &'static str> {
         let mut output = Vec::new();
-    
-        // recorrer cada fila/token
-        for i in 0..matrix.len(){
+
+        // iterate over each row/token
+        for i in 0..matrix.len() {
             output.push(layer_norm(&matrix[i], gamma, beta)?);
         }
-    
+
         Ok(output)
     }
 
@@ -757,10 +757,10 @@ fn main() {
         // iterate over each value
         // if greater than 0, keep it
         // otherwise, store 0.0
-        for i in 0..vector.len(){
-            if(vector[i] < 0.0){
+        for i in 0..vector.len() {
+            if (vector[i] < 0.0) {
                 output[i] = 0.0;
-            }else{
+            } else {
                 output.push(vector[i]);
             }
         }
@@ -768,19 +768,35 @@ fn main() {
         output
     }
 
-    fn sigmoid(vector: &Vec<f64>)->Vec<f64>{
+    fn sigmoid(vector: &Vec<f64>) -> Vec<f64> {
         let mut output = Vec::new();
 
-        for i in 0..vector.len(){
-            output.push(1.0 / (1.0 + power(EULER, -vector[i])));
+        for &x in vector {
+            output.push(1.0 / (1.0 + power(EULER, -x)));
         }
 
         output
     }
 
     fn relu_derivative(x: f64) -> f64 {
-        // you will implement this
-        todo!()
+        if x > 0.0 {
+            1.0
+        } else {
+            0.0
+        }
     }
 
+    let matrix = vec![vec![1.0, -2.0, 3.0], vec![-4.0, 5.0, -6.0]];
+
+    fn relu_matrix(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+        let mut output = Vec::new();
+        // iterate over each row
+        for row in matrix {
+            // apply relu() to that row
+            // store the result
+            output.push(relu(row))
+        }
+
+        output
+    }
 }
