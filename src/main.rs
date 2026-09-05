@@ -805,25 +805,51 @@ fn main() {
     let bias = vec![0.1, 0.2, 0.3];
 
     fn add_bias(matrix: &Vec<Vec<f64>>, bias: &Vec<f64>) -> Result<Vec<Vec<f64>>, &'static str> {
-        let mut output = Vec::new();
-        // 1. verificar que cada fila tenga
-        //    la misma cantidad de elementos que bias
-        if matrix[0].len() != bias.len() {
-            return Err("error");
+        if matrix.is_empty() {
+            return Err("Invalid operation: matrix cannot be empty");
         }
-        //
-        // 2. recorrer las filas
-        //
+
+        for row in matrix {
+            if row.len() != bias.len() {
+                return Err("Invalid operation: each row must have the same length as bias");
+            }
+        }
+
+        let mut output = Vec::new();
         for row in matrix {
             let mut r = Vec::new();
             for i in 0..row.len() {
-                // 3. recorrer las columnas
-                //
-                // 4. matrix[i][j] + bias[j]
                 r.push(row[i] + bias[i]);
             }
             output.push(r);
         }
         Ok(output)
+    }
+
+    fn feed_forward(
+        x: &Vec<Vec<f64>>,
+        w1: &Vec<Vec<f64>>,
+        b1: &Vec<f64>,
+        w2: &Vec<Vec<f64>>,
+        b2: &Vec<f64>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        if x[0].len() != w1.len() {
+            return Err("Invalid operations the arrays are of different sizes");
+        }
+
+        if w1[0].len() != b1.len() {
+            return Err("Invalid operation: w1 and b1 dimensions must match");
+        }
+
+        // 1. x · W1
+        let x_w1 = matrix_matrix_mul(x, w1)?;
+        // 2. + b1
+        let x_w1_b1 = add_bias(&x_w1, b1)?;
+        // 3. ReLU
+        let relu_out = relu_matrix(&x_w1_b1);
+        // 4. · W2
+        let relu_w2 = matrix_matrix_mul(&relu_out, w2)?;
+        // 5. + b2
+        add_bias(&relu_w2, b2)
     }
 }
