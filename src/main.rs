@@ -799,4 +799,31 @@ fn main() {
 
         output
     }
+
+    let matrix = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+
+    let bias = vec![0.1, 0.2, 0.3];
+
+    fn add_bias(matrix: &Vec<Vec<f64>>, bias: &Vec<f64>) -> Result<Vec<Vec<f64>>, &'static str> {
+        let mut output = Vec::new();
+        // 1. verificar que cada fila tenga
+        //    la misma cantidad de elementos que bias
+        if matrix[0].len() != bias.len() {
+            return Err("error");
+        }
+        //
+        // 2. recorrer las filas
+        //
+        for row in matrix {
+            let mut r = Vec::new();
+            for i in 0..row.len() {
+                // 3. recorrer las columnas
+                //
+                // 4. matrix[i][j] + bias[j]
+                r.push(row[i] + bias[i]);
+            }
+            output.push(r);
+        }
+        Ok(output)
+    }
 }
