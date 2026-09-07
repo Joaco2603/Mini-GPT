@@ -928,43 +928,71 @@ fn main() {
         ln2: LayerNormParams,
     }
 
-    fn add_to_matrix(matrix: &Vec<Vec<f64>>, delta: f64) -> Vec<Vec<f64>> {
-        matrix
-            .iter()
-            .map(|row| row.iter().map(|v| v + delta).collect())
-            .collect()
+    fn next_weight(seed: &mut u64) -> f64 {
+        *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let unit = ((*seed >> 33) as f64) / ((1u64 << 31) as f64);
+        (unit * 2.0 - 1.0) * 0.3
     }
 
-    fn add_to_vector(vector: &Vec<f64>, delta: f64) -> Vec<f64> {
-        vector.iter().map(|v| v + delta).collect()
+    fn init_matrix(rows: usize, cols: usize, seed: &mut u64) -> Vec<Vec<f64>> {
+        let mut output = Vec::new();
+        for _ in 0..rows {
+            let mut row = Vec::new();
+            for _ in 0..cols {
+                row.push(next_weight(seed));
+            }
+            output.push(row);
+        }
+        output
     }
 
-    fn with_offset(params: &TransformerBlockParams, delta: f64) -> TransformerBlockParams {
+    fn zeros(len: usize) -> Vec<f64> {
+        let mut output = Vec::new();
+        for _ in 0..len {
+            output.push(0.0);
+        }
+        output
+    }
+
+    fn ones(len: usize) -> Vec<f64> {
+        let mut output = Vec::new();
+        for _ in 0..len {
+            output.push(1.0);
+        }
+        output
+    }
+
+    fn init_transformer_block(
+        d_model: usize,
+        d_head: usize,
+        d_ff: usize,
+        seed: &mut u64,
+    ) -> TransformerBlockParams {
         TransformerBlockParams {
             head1: AttentionHeadParams {
-                w_q: add_to_matrix(&params.head1.w_q, delta),
-                w_k: add_to_matrix(&params.head1.w_k, delta),
-                w_v: add_to_matrix(&params.head1.w_v, delta),
+                w_q: init_matrix(d_model, d_head, seed),
+                w_k: init_matrix(d_model, d_head, seed),
+                w_v: init_matrix(d_model, d_head, seed),
             },
             head2: AttentionHeadParams {
-                w_q: add_to_matrix(&params.head2.w_q, delta),
-                w_k: add_to_matrix(&params.head2.w_k, delta),
-                w_v: add_to_matrix(&params.head2.w_v, delta),
+                w_q: init_matrix(d_model, d_head, seed),
+                w_k: init_matrix(d_model, d_head, seed),
+                w_v: init_matrix(d_model, d_head, seed),
             },
-            w_o: add_to_matrix(&params.w_o, delta),
+            w_o: init_matrix(d_model, d_model, seed),
             ffn: FFNParams {
-                w1: add_to_matrix(&params.ffn.w1, delta),
-                b1: add_to_vector(&params.ffn.b1, delta),
-                w2: add_to_matrix(&params.ffn.w2, delta),
-                b2: add_to_vector(&params.ffn.b2, delta),
+                w1: init_matrix(d_model, d_ff, seed),
+                b1: zeros(d_ff),
+                w2: init_matrix(d_ff, d_model, seed),
+                b2: zeros(d_model),
             },
             ln1: LayerNormParams {
-                gamma: add_to_vector(&params.ln1.gamma, delta),
-                beta: add_to_vector(&params.ln1.beta, delta),
+                gamma: ones(d_model),
+                beta: zeros(d_model),
             },
             ln2: LayerNormParams {
-                gamma: add_to_vector(&params.ln2.gamma, delta),
-                beta: add_to_vector(&params.ln2.beta, delta),
+                gamma: ones(d_model),
+                beta: zeros(d_model),
             },
         }
     }
@@ -1016,36 +1044,34 @@ fn main() {
         Ok(output)
     }
 
-    let block1 = TransformerBlockParams {
-        head1: AttentionHeadParams {
-            w_q: w_q1.clone(),
-            w_k: w_k1.clone(),
-            w_v: w_v1.clone(),
-        },
-        head2: AttentionHeadParams {
-            w_q: w_q2.clone(),
-            w_k: w_k2.clone(),
-            w_v: w_v2.clone(),
-        },
-        w_o: w_o.clone(),
-        ffn: FFNParams {
-            w1: w1.clone(),
-            b1: b1.clone(),
-            w2: w2.clone(),
-            b2: b2.clone(),
-        },
-        ln1: LayerNormParams {
-            gamma: gamma.clone(),
-            beta: beta.clone(),
-        },
-        ln2: LayerNormParams {
-            gamma: gamma.clone(),
-            beta: beta.clone(),
-        },
-    };
-    let block2 = with_offset(&block1, 0.05);
-    let block3 = with_offset(&block1, 0.10);
+    let d_model = 4;
+    let d_head = 2;
+    let d_ff = 8;
+    let mut seed: u64 = 42;
+
+    let block1 = init_transformer_block(d_model, d_head, d_ff, &mut seed);
+    let block2 = init_transformer_block(d_model, d_head, d_ff, &mut seed);
+    let block3 = init_transformer_block(d_model, d_head, d_ff, &mut seed);
 
     let stacked = stack_transformer_blocks(&x, &[block1, block2, block3]).unwrap();
     println!("After 3 stacked transformer blocks: {:?}", stacked);
+
+    fn lm_head(
+        x: &Vec<Vec<f64>>,
+        w_vocab: &Vec<Vec<f64>>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        // [seq_len × d_model] · [d_model × vocab_size] = [seq_len × vocab_size]
+        matrix_matrix_mul(x, w_vocab)
+    }
+
+    // d_model = 4, vocab_size = 6
+    let w_vocab = vec![
+        vec![0.1, -0.2, 0.3, 0.4, -0.1, 0.2],
+        vec![0.2, 0.1, -0.4, 0.3, 0.5, -0.3],
+        vec![-0.3, 0.4, 0.1, -0.2, 0.2, 0.5],
+        vec![0.4, 0.3, -0.1, 0.2, -0.4, 0.1],
+    ];
+
+    let logits = lm_head(&stacked, &w_vocab).unwrap();
+    println!("LM head logits [seq_len × vocab_size]: {:?}", logits);
 }
