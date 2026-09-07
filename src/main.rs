@@ -704,8 +704,8 @@ fn main() {
         Ok(output)
     }
 
-    let gamma = [1.0, 1.0, 1.0, 1.0];
-    let beta = [0.0, 0.0, 0.0, 0.0];
+    let gamma = vec![1.0, 1.0, 1.0, 1.0];
+    let beta = vec![0.0, 0.0, 0.0, 0.0];
 
     fn scale_and_shift(
         normalized: &Vec<f64>,
@@ -758,8 +758,8 @@ fn main() {
         // if greater than 0, keep it
         // otherwise, store 0.0
         for i in 0..vector.len() {
-            if (vector[i] < 0.0) {
-                output[i] = 0.0;
+            if vector[i] < 0.0 {
+                output.push(0.0);
             } else {
                 output.push(vector[i]);
             }
@@ -841,6 +841,14 @@ fn main() {
             return Err("Invalid operation: w1 and b1 dimensions must match");
         }
 
+        if w1[0].len() != w2.len() {
+            return Err("Invalid operation: w1 columns must match w2 rows");
+        }
+
+        if w2[0].len() != b2.len() {
+            return Err("Invalid operation: w2 and b2 dimensions must match");
+        }
+
         // 1. x · W1
         let x_w1 = matrix_matrix_mul(x, w1)?;
         // 2. + b1
@@ -852,4 +860,79 @@ fn main() {
         // 5. + b2
         add_bias(&relu_w2, b2)
     }
+
+    // Post-attention LayerNorm
+    let norm1 = layer_norm_matrix(&residual1, &gamma, &beta).unwrap();
+
+    // Feed-forward: d_model(4) -> d_ff(8) -> d_model(4)
+    let w1 = vec![
+        vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+        vec![0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+        vec![0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        vec![0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 0.1],
+    ];
+    let b1 = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+    let w2 = vec![
+        vec![0.1, 0.2, 0.3, 0.4],
+        vec![0.2, 0.3, 0.4, 0.5],
+        vec![0.3, 0.4, 0.5, 0.6],
+        vec![0.4, 0.5, 0.6, 0.7],
+        vec![0.5, 0.6, 0.7, 0.8],
+        vec![0.6, 0.7, 0.8, 0.9],
+        vec![0.7, 0.8, 0.9, 1.0],
+        vec![0.8, 0.9, 1.0, 0.1],
+    ];
+    let b2 = vec![0.1, 0.2, 0.3, 0.4];
+
+    let ff_out = feed_forward(&norm1, &w1, &b1, &w2, &b2).unwrap();
+    let residual2 = add_matriz(&norm1, &ff_out).unwrap();
+
+    // LayerNorm después del feed-forward (residual)
+    let norm2 = layer_norm_matrix(&residual2, &gamma, &beta).unwrap();
+
+    println!("After FFN LayerNorm: {:?}", norm2);
+
+    fn transformer_block(
+        x: &Vec<Vec<f64>>,
+        w_q1: &Vec<Vec<f64>>,
+        w_k1: &Vec<Vec<f64>>,
+        w_v1: &Vec<Vec<f64>>,
+        w_q2: &Vec<Vec<f64>>,
+        w_k2: &Vec<Vec<f64>>,
+        w_v2: &Vec<Vec<f64>>,
+        w_o: &Vec<Vec<f64>>,
+        w1: &Vec<Vec<f64>>,
+        b1: &Vec<f64>,
+        w2: &Vec<Vec<f64>>,
+        b2: &Vec<f64>,
+        gamma1: &Vec<f64>,
+        beta1: &Vec<f64>,
+        gamma2: &Vec<f64>,
+        beta2: &Vec<f64>,
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        // 1. Multi-Head Attention (each head has its own WQ, WK, WV)
+        let head1 = attention_head(x, w_q1, w_k1, w_v1)?;
+        let head2 = attention_head(x, w_q2, w_k2, w_v2)?;
+        let concat = concat_heads(&head1, &head2);
+        let multihead_output = matrix_matrix_mul(&concat, w_o)?;
+
+        // 2. residual1 = x + attention
+        let residual = add_matriz(x, &multihead_output)?;
+
+        // 3. norm1 = LayerNorm(residual1)
+        let norm1 = layer_norm_matrix(&residual, gamma1, beta1)?;
+
+        // 4. ff_out = FFN(norm1)
+        let ff_out = feed_forward(&norm1, w1, b1, w2, b2)?;
+
+        // 5. residual2 = norm1 + ff_out
+        let residual2 = add_matriz(&norm1, &ff_out)?;
+
+        // 6. norm2 = LayerNorm(residual2)
+        let norm2 = layer_norm_matrix(&residual2, gamma2, beta2)?;
+
+        Ok(norm2)
+    }
+
+    
 }
