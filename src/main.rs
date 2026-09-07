@@ -340,6 +340,11 @@ fn main() {
             output.push(cos(angle));
         }
 
+        if d_model % 2 == 1 {
+            let angle = positional_angle(pos, d_model / 2, d_model);
+            output.push(sin(angle));
+        }
+
         output
     }
 
@@ -642,9 +647,9 @@ fn main() {
         Ok(output / vector.len() as f64)
     }
 
-    let x = vec![2.0, 4.0, 6.0, 8.0];
+    let mean_input = vec![2.0, 4.0, 6.0, 8.0];
 
-    println!("{}", mean(&x).unwrap());
+    println!("{}", mean(&mean_input).unwrap());
 
     fn variance(vector: &Vec<f64>) -> Result<f64, &'static str> {
         if vector.is_empty() {
@@ -892,47 +897,155 @@ fn main() {
 
     println!("After FFN LayerNorm: {:?}", norm2);
 
+    #[derive(Clone)]
+    struct AttentionHeadParams {
+        w_q: Vec<Vec<f64>>,
+        w_k: Vec<Vec<f64>>,
+        w_v: Vec<Vec<f64>>,
+    }
+
+    #[derive(Clone)]
+    struct FFNParams {
+        w1: Vec<Vec<f64>>,
+        b1: Vec<f64>,
+        w2: Vec<Vec<f64>>,
+        b2: Vec<f64>,
+    }
+
+    #[derive(Clone)]
+    struct LayerNormParams {
+        gamma: Vec<f64>,
+        beta: Vec<f64>,
+    }
+
+    #[derive(Clone)]
+    struct TransformerBlockParams {
+        head1: AttentionHeadParams,
+        head2: AttentionHeadParams,
+        w_o: Vec<Vec<f64>>,
+        ffn: FFNParams,
+        ln1: LayerNormParams,
+        ln2: LayerNormParams,
+    }
+
+    fn add_to_matrix(matrix: &Vec<Vec<f64>>, delta: f64) -> Vec<Vec<f64>> {
+        matrix
+            .iter()
+            .map(|row| row.iter().map(|v| v + delta).collect())
+            .collect()
+    }
+
+    fn add_to_vector(vector: &Vec<f64>, delta: f64) -> Vec<f64> {
+        vector.iter().map(|v| v + delta).collect()
+    }
+
+    fn with_offset(params: &TransformerBlockParams, delta: f64) -> TransformerBlockParams {
+        TransformerBlockParams {
+            head1: AttentionHeadParams {
+                w_q: add_to_matrix(&params.head1.w_q, delta),
+                w_k: add_to_matrix(&params.head1.w_k, delta),
+                w_v: add_to_matrix(&params.head1.w_v, delta),
+            },
+            head2: AttentionHeadParams {
+                w_q: add_to_matrix(&params.head2.w_q, delta),
+                w_k: add_to_matrix(&params.head2.w_k, delta),
+                w_v: add_to_matrix(&params.head2.w_v, delta),
+            },
+            w_o: add_to_matrix(&params.w_o, delta),
+            ffn: FFNParams {
+                w1: add_to_matrix(&params.ffn.w1, delta),
+                b1: add_to_vector(&params.ffn.b1, delta),
+                w2: add_to_matrix(&params.ffn.w2, delta),
+                b2: add_to_vector(&params.ffn.b2, delta),
+            },
+            ln1: LayerNormParams {
+                gamma: add_to_vector(&params.ln1.gamma, delta),
+                beta: add_to_vector(&params.ln1.beta, delta),
+            },
+            ln2: LayerNormParams {
+                gamma: add_to_vector(&params.ln2.gamma, delta),
+                beta: add_to_vector(&params.ln2.beta, delta),
+            },
+        }
+    }
+
     fn transformer_block(
         x: &Vec<Vec<f64>>,
-        w_q1: &Vec<Vec<f64>>,
-        w_k1: &Vec<Vec<f64>>,
-        w_v1: &Vec<Vec<f64>>,
-        w_q2: &Vec<Vec<f64>>,
-        w_k2: &Vec<Vec<f64>>,
-        w_v2: &Vec<Vec<f64>>,
-        w_o: &Vec<Vec<f64>>,
-        w1: &Vec<Vec<f64>>,
-        b1: &Vec<f64>,
-        w2: &Vec<Vec<f64>>,
-        b2: &Vec<f64>,
-        gamma1: &Vec<f64>,
-        beta1: &Vec<f64>,
-        gamma2: &Vec<f64>,
-        beta2: &Vec<f64>,
+        params: &TransformerBlockParams,
     ) -> Result<Vec<Vec<f64>>, &'static str> {
-        // 1. Multi-Head Attention (each head has its own WQ, WK, WV)
-        let head1 = attention_head(x, w_q1, w_k1, w_v1)?;
-        let head2 = attention_head(x, w_q2, w_k2, w_v2)?;
+        let head1 = attention_head(
+            x,
+            &params.head1.w_q,
+            &params.head1.w_k,
+            &params.head1.w_v,
+        )?;
+        let head2 = attention_head(
+            x,
+            &params.head2.w_q,
+            &params.head2.w_k,
+            &params.head2.w_v,
+        )?;
         let concat = concat_heads(&head1, &head2);
-        let multihead_output = matrix_matrix_mul(&concat, w_o)?;
+        let multihead_output = matrix_matrix_mul(&concat, &params.w_o)?;
 
-        // 2. residual1 = x + attention
         let residual = add_matriz(x, &multihead_output)?;
+        let norm1 = layer_norm_matrix(&residual, &params.ln1.gamma, &params.ln1.beta)?;
 
-        // 3. norm1 = LayerNorm(residual1)
-        let norm1 = layer_norm_matrix(&residual, gamma1, beta1)?;
+        let ff_out = feed_forward(
+            &norm1,
+            &params.ffn.w1,
+            &params.ffn.b1,
+            &params.ffn.w2,
+            &params.ffn.b2,
+        )?;
 
-        // 4. ff_out = FFN(norm1)
-        let ff_out = feed_forward(&norm1, w1, b1, w2, b2)?;
-
-        // 5. residual2 = norm1 + ff_out
         let residual2 = add_matriz(&norm1, &ff_out)?;
-
-        // 6. norm2 = LayerNorm(residual2)
-        let norm2 = layer_norm_matrix(&residual2, gamma2, beta2)?;
+        let norm2 = layer_norm_matrix(&residual2, &params.ln2.gamma, &params.ln2.beta)?;
 
         Ok(norm2)
     }
 
-    
+    fn stack_transformer_blocks(
+        x: &Vec<Vec<f64>>,
+        blocks: &[TransformerBlockParams],
+    ) -> Result<Vec<Vec<f64>>, &'static str> {
+        let mut output = x.clone();
+        for block in blocks {
+            output = transformer_block(&output, block)?;
+        }
+        Ok(output)
+    }
+
+    let block1 = TransformerBlockParams {
+        head1: AttentionHeadParams {
+            w_q: w_q1.clone(),
+            w_k: w_k1.clone(),
+            w_v: w_v1.clone(),
+        },
+        head2: AttentionHeadParams {
+            w_q: w_q2.clone(),
+            w_k: w_k2.clone(),
+            w_v: w_v2.clone(),
+        },
+        w_o: w_o.clone(),
+        ffn: FFNParams {
+            w1: w1.clone(),
+            b1: b1.clone(),
+            w2: w2.clone(),
+            b2: b2.clone(),
+        },
+        ln1: LayerNormParams {
+            gamma: gamma.clone(),
+            beta: beta.clone(),
+        },
+        ln2: LayerNormParams {
+            gamma: gamma.clone(),
+            beta: beta.clone(),
+        },
+    };
+    let block2 = with_offset(&block1, 0.05);
+    let block3 = with_offset(&block1, 0.10);
+
+    let stacked = stack_transformer_blocks(&x, &[block1, block2, block3]).unwrap();
+    println!("After 3 stacked transformer blocks: {:?}", stacked);
 }
