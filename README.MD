@@ -1,78 +1,81 @@
 # Mini-GPT
 
-Implementación educativa de un Transformer / GPT desde cero en Rust, sin dependencias de deep learning. El objetivo es entender cada operación matemática antes de abstraerla en un framework.
+Educational Transformer / GPT implementation from scratch in Rust, with no deep-learning dependencies. The goal is to understand each math operation before wrapping it in a framework.
 
-## Estado del proyecto
+## Project status
 
-El núcleo actual vive en `src/main.rs` como un sandbox de aprendizaje. Los módulos de `src/models/`, `train.rs`, `predict.rs` y `dataset.rs` están preparados pero aún vacíos.
+The forward pass lives in the crate: numeric helpers in `src/libs/`, model pieces in `src/models/`, and a short demo in `src/main.rs`. Training, prediction, dataset loading, encoder, and decoder are still stubs.
 
-### Implementado
+### Implemented
 
-- Álgebra lineal: producto punto, multiplicación matriz-vector y matriz-matriz, transposición
-- Embeddings y lookup de tokens
-- Codificación posicional sinusoidal
-- Funciones numéricas propias: `exp`, `ln`, `power`, `sin`, `cos`, `softmax`
+- Linear algebra: dot product, matrix-vector and matrix-matrix multiply, transpose
+- Token embeddings and lookup
+- Sinusoidal positional encoding
+- Custom numerics: `exp`, `ln`, `power`, `sin`, `cos`, `softmax`
 - Scaled dot-product attention
-- Multi-head attention con proyección de salida
-- Helpers de estadística para layer normalization (`mean`, `variance`, `std_dev`, `normalize`)
+- Multi-head attention with output projection
+- Layer normalization helpers (`mean`, `variance`, `std_dev`, `normalize`)
+- Feed-forward network, residual connections, stacked transformer blocks
+- LM head projection to vocabulary logits
 
-### Próximos pasos
+### Next steps
 
-- Extraer las operaciones de `main.rs` a módulos reutilizables
-- Feed-forward network, residual connections y layer norm completos
-- Encoder/decoder y bloque Transformer
-- Pipeline de entrenamiento sobre `src/data/clean_titulares.txt`
-- Generación de texto (predict)
+- Encoder / decoder and causal masking
+- Training pipeline on `src/data/clean_titulares.txt`
+- Text generation (predict)
 
-## Requisitos
+## Requirements
 
 - [Rust](https://www.rust-lang.org/tools/install) (edition 2021)
 
-No se requieren dependencias externas; el `Cargo.toml` está vacío a propósito.
+No external crates; `Cargo.toml` is empty on purpose.
 
-## Uso
+## Usage
 
 ```bash
-# Clonar el repositorio
+# Clone the repository
 git clone https://github.com/Joaco2603/Mini-GPT.git
 cd Mini-GPT
 
-# Compilar
+# Build
 cargo build
 
-# Ejecutar el sandbox de operaciones
+# Run the forward-pass demo
 cargo run
 ```
 
-## Estructura
+## Structure
 
 ```text
 src/
-├── main.rs              # Sandbox con las operaciones implementadas
+├── main.rs              # Demo: embeddings, stacked blocks, LM head
 ├── lib.rs
-├── train.rs             # (pendiente)
-├── predict.rs           # (pendiente)
-├── dataset.rs           # (pendiente)
+├── train.rs             # (todo)
+├── predict.rs           # (todo)
+├── dataset.rs           # (todo)
 ├── config/
 │   └── config.rs
+├── libs/
+│   ├── math.rs
+│   └── linalg.rs
 ├── models/
 │   ├── attention.rs
 │   ├── embeddings.rs
-│   ├── encoder.rs
-│   ├── decoder.rs
+│   ├── encoder.rs       # (todo)
+│   ├── decoder.rs       # (todo)
 │   ├── sublayers.rs
 │   └── transformer.rs
 └── data/
     └── clean_titulares.txt
 
 docs/
-└── learning.md          # Roadmap de estudio en ML y Transformers
+└── learning.md          # Broader ML / Transformers study roadmap
 ```
 
-## Roadmap de aprendizaje
+## Learning roadmap
 
-Para el plan de estudio más amplio (NumPy, PyTorch, interpretabilidad, MLOps, etc.), ver [docs/learning.md](docs/learning.md).
+For the wider study plan (NumPy, PyTorch, interpretability, MLOps, and so on), see [docs/learning.md](docs/learning.md).
 
-## Licencia
+## License
 
-Proyecto personal de aprendizaje.
+Personal learning project.
