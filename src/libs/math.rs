@@ -2,7 +2,7 @@ const PI: f64 = std::f64::consts::PI;
 const TWO_PI: f64 = std::f64::consts::TAU;
 pub const EULER: f64 = std::f64::consts::E;
 
-/// ln(x) = ln(2^k * x') = k·ln(2) + ln(x'), sin usar `f64::ln`.
+/// ln(x) = ln(2^k * x') = k·ln(2) + ln(x'), without using `f64::ln`.
 pub fn ln(x: f64) -> f64 {
     if x <= 0.0 {
         return f64::NAN;

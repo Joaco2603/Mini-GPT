@@ -17,7 +17,7 @@ fn main() {
     let with_positions = add_matriz(&token_embeddings, &positions).unwrap();
     println!("Embeddings + positional encoding: {:?}", with_positions);
 
-    // Input de demo para el bloque (d_model = 4), igual que el sandbox original.
+    // Demo input for the block (d_model = 4), matching the original sandbox.
     let x = vec![
         vec![0.2, 0.5, -0.1, 0.4],
         vec![0.8, -0.2, 0.4, 0.1],

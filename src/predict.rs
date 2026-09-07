@@ -1,1 +1,1 @@
-// Pendiente: generación de tokens a partir de logits.
+// TODO: generate tokens from logits.

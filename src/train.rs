@@ -1,1 +1,1 @@
-// Pendiente: loop de entrenamiento (loss, backward, update).
+// TODO: training loop (loss, backward, update).

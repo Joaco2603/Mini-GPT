@@ -1,1 +1,1 @@
-// Pendiente: stack de encoder (aún no hay implementación).
+// TODO: encoder stack (not implemented yet).

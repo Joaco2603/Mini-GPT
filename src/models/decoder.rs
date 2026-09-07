@@ -1,1 +1,1 @@
-// Pendiente: stack de decoder / causal mask (aún no hay implementación).
+// TODO: decoder stack / causal mask (not implemented yet).
