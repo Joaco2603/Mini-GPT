@@ -129,6 +129,43 @@ pub fn stack_transformer_blocks(
     Ok(output)
 }
 
-pub fn lm_head(x: &[Vec<f64>], w_vocab: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, &'static str> {
+/// Última capa del modelo: pasa de espacio del transformer a logits del vocabulario.
+///
+/// `x`:      [seq_len × d_model]   ← salida de los bloques apilados
+/// `w_vocab`: [d_model × vocab_size]
+/// return:   [seq_len × vocab_size]
+///
+/// Pista: ya tenés `matrix_matrix_mul`. Pensá qué significa cada fila
+/// del resultado (un vector de scores, uno por token del vocabulario).
+pub fn lm_head(
+    x: &[Vec<f64>],
+    w_vocab: &[Vec<f64>],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    if x.is_empty() || w_vocab.is_empty() {
+        return Err("x and w_vocab must be non-empty");
+    }
+    if x[0].is_empty() || w_vocab[0].is_empty() {
+        return Err("x and w_vocab rows must be non-empty");
+    }
+
+    let d_model = x[0].len();
+    let vocab_size = w_vocab[0].len();
+
+    for row in x {
+        if row.len() != d_model {
+            return Err("All rows of x must have the same d_model");
+        }
+    }
+    for row in w_vocab {
+        if row.len() != vocab_size {
+            return Err("All rows of w_vocab must have the same vocab_size");
+        }
+    }
+    if d_model != w_vocab.len() {
+        return Err("x columns (d_model) must match w_vocab rows");
+    }
+
     matrix_matrix_mul(x, w_vocab)
+
 }
+
