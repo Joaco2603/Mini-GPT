@@ -117,7 +117,7 @@ pub fn sin(angle: f64) -> f64 {
     let mut x = angle % TWO_PI;
     if x > PI {
         x -= TWO_PI;
-    } else {
+    } else if x < -PI {
         x += TWO_PI;
     }
     let x2 = x * x;

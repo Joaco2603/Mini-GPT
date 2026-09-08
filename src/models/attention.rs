@@ -1,5 +1,6 @@
 use crate::libs::linalg::{matrix_matrix_mul, scale_matrix, transpose};
 use crate::libs::math::softmax;
+use crate::models::mask::apply_causal_mask;
 
 pub fn concat_heads(head1: &[Vec<f64>], head2: &[Vec<f64>]) -> Vec<Vec<f64>> {
     let mut output = Vec::with_capacity(head1.len());
@@ -33,9 +34,10 @@ pub fn attention_head(
     let d_head = q[0].len();
     let scale = (d_head as f64).sqrt();
     let scaled_scores = scale_matrix(&scores, scale);
+    let masked_scores = apply_causal_mask(&scaled_scores)?;
 
     let mut attention_weights = Vec::new();
-    for row in &scaled_scores {
+    for row in &masked_scores {
         attention_weights.push(softmax(row));
     }
 
