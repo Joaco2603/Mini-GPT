@@ -3,6 +3,7 @@ use mini_gpt::models::embeddings::{embedding_lookup, positional_encoding_matrix}
 use mini_gpt::models::transformer::{
     init_transformer_block, lm_head, stack_transformer_blocks,
 };
+use mini_gpt::predict::{next_token_id, softmax_matrix};
 
 fn main() {
     let embeddings = vec![
@@ -44,4 +45,10 @@ fn main() {
     ];
     let logits = lm_head(&stacked, &w_vocab).unwrap();
     println!("LM head logits [seq_len × vocab_size]: {:?}", logits);
+
+    let probs = softmax_matrix(&logits).unwrap();
+    println!("Softmax probs [seq_len × vocab_size]: {:?}", probs);
+
+    let next_id = next_token_id(&logits).unwrap();
+    println!("Next token id (argmax of last row): {}", next_id);
 }

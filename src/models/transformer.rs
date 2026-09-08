@@ -129,14 +129,14 @@ pub fn stack_transformer_blocks(
     Ok(output)
 }
 
-/// Última capa del modelo: pasa de espacio del transformer a logits del vocabulario.
+/// Last layer of the model: maps from the transformer's embedding space to vocabulary logits.
 ///
-/// `x`:      [seq_len × d_model]   ← salida de los bloques apilados
+/// `x`:      [seq_len × d_model]   ← output from the stacked blocks
 /// `w_vocab`: [d_model × vocab_size]
 /// return:   [seq_len × vocab_size]
 ///
-/// Pista: ya tenés `matrix_matrix_mul`. Pensá qué significa cada fila
-/// del resultado (un vector de scores, uno por token del vocabulario).
+/// Hint: you already have `matrix_matrix_mul`. Think about what each row
+/// of the result means (a vector of scores, one per vocabulary token).
 pub fn lm_head(
     x: &[Vec<f64>],
     w_vocab: &[Vec<f64>],
