@@ -51,23 +51,93 @@ pub fn cross_entropy_loss(logits: &[Vec<f64>], targets: &[usize]) -> Result<f64,
 #[allow(unused_variables)]
 pub fn one_hot(vocab_size: usize, target: usize) -> Result<Vec<f64>, &'static str> {
     // validate target < vocab_size
-    // vec of zeros, then output[target] = 1.0
-    todo!("one-hot vector")
+    if target >= vocab_size {
+        return Err("Target index is out of bounds for the given vocabulary size");
+    }
+
+    let mut vec = vec![0.0; vocab_size];
+    vec[target] = 1.0;
+    Ok(vec)
 }
 
-/// dL/dlogits for mean cross-entropy. Same shape as `logits`: [seq × vocab].
+/// dL/dlogits para la entropía cruzada media (mean cross-entropy). Misma dimensión que `logits`: [seq × vocab].
 ///
-/// For each row: (softmax(row) - one_hot(target)) / seq_len
+/// Para cada fila: (softmax(row) - one_hot(target)) / seq_len
 ///
-/// Dividing by seq_len matches `cross_entropy_loss` (mean, not sum).
+/// Dividir por seq_len coincide con `cross_entropy_loss` (promedio, no suma).
 #[allow(unused_variables)]
 pub fn cross_entropy_grad_logits(
     logits: &[Vec<f64>],
     targets: &[usize],
 ) -> Result<Vec<Vec<f64>>, &'static str> {
-    // same validations as cross_entropy_loss
-    // for each row: softmax, one_hot, subtract, divide by logits.len()
-    todo!("dL/dlogits")
+    // 1. VALIDACIONES INICIALES
+    // - Validar que 'logits' no esté vacío.
+    if logits.is_empty() {
+        return Err("Logits is empty");
+    }
+    if targets.is_empty() {
+        return Err("targets must be non-empty");
+    }
+    // - Validar que 'logits.len() == targets.len()' (la secuencia debe coincidir con las etiquetas).
+    if logits.len() != targets.len() {
+        return Err("Logits and targets must have the same length");
+    }
+    if logits[0].is_empty() {
+        return Err("logits rows must be non-empty");
+    }
+    // - Obtener la dimensión del vocabulario (vocab_size) de la primera fila y asegurar
+    //   que todas las demás filas tengan la misma longitud.
+    let vocab_size = logits[0].len();
+
+    // - Validar que cada elemento en 'targets' sea menor que 'vocab_size' (target < vocab_size).
+    for row in logits {
+        if row.is_empty() {
+            return Err("Logits rows must be non-empty");
+        }
+        if row.len() != vocab_size {
+            return Err("All logits rows must have the same ");
+        }
+    }
+
+    // 2. OBTENER LA LONGITUD DE LA SECUENCIA (seq_len)
+    // Se usará para promediar el gradiente al final.
+    // let seq_len = logits.len() as f64;
+    let seq_len = logits.len() as f64;
+
+    // 3. MATRIZ DE RESULTADO
+    // Crear la matriz contenedora para almacenar los gradientes [seq x vocab].
+    let mut grads = Vec::new();
+
+    // 4. BUCLE PARA PROCESAR CADA ELEMENTO DE LA SECUENCIA (Fila por fila)
+    // Para i de 0 a logits.len():
+    for i in 0..logits.len() {
+        //   a. Obtener los logits de la posición actual: logits[i]
+        //   b. Obtener el índice objetivo actual: targets[i]
+        //
+        let target_i = targets[i];
+
+        //   c. Calcular Softmax sobre la fila actual:
+        //      probs = softmax(&logits[i])?
+        //
+        let probs = softmax(&logits[i]);
+
+        //   d. Generar el vector One-Hot para la etiqueta actual:
+        //      oh = one_hot(vocab_size, target_i)?
+        //
+        let oh = one_hot(vocab_size, target_i)?;
+
+        let mut grad_row = vec![0.0; vocab_size];
+
+        //   e. Calcular la diferencia ponderada para cada clase en el vocabulario (j):
+        //      grad_row[j] = (probs[j] - oh[j]) / seq_len
+        //
+        for j in 0..vocab_size {
+            grad_row[j] = (probs[j] - oh[j]) / seq_len;
+        }
+
+        grads.push(grad_row);
+    }
+    Ok(grads)
 }
 
 /// `weights[i][j] -= lr * grads[i][j]`
