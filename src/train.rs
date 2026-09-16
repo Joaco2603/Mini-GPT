@@ -148,7 +148,20 @@ pub fn sgd_update_matrix(
     lr: f64,
 ) -> Result<(), &'static str> {
     // validate same shape, then subtract
-    todo!("SGD step")
+    if weights.len() != grads.len() {
+        return Err("Weights and gradients must have the same number of rows");
+    }
+
+    for (w_row, g_row) in weights.iter_mut().zip(grads.iter()) {
+        if w_row.len() != g_row.len(){
+            return Err("Weights rows and gradients rows must have the same number of rows");
+        }
+        for (w, g) in w_row.iter_mut().zip(g_row.iter()){
+            *w -= lr * g;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
