@@ -1,3 +1,4 @@
+use crate::libs::linalg::{matrix_matrix_mul, transpose};
 use crate::libs::math::{ln, softmax};
 
 /// Mean cross-entropy over sequence positions.
@@ -114,7 +115,7 @@ pub fn cross_entropy_grad_logits(
         //   a. Obtener los logits de la posición actual: logits[i]
         //   b. Obtener el índice objetivo actual: targets[i]
         //
-        let target_i = targets[i];
+        let target_i: usize = targets[i];
 
         //   c. Calcular Softmax sobre la fila actual:
         //      probs = softmax(&logits[i])?
@@ -162,6 +163,23 @@ pub fn sgd_update_matrix(
     }
 
     Ok(())
+}
+
+/// `dW = xᵀ @ d_logits`  →  `[d_model × vocab_size]`
+///
+/// `x`:        [seq × d_model]  (same rows as `d_logits`)
+/// `d_logits`: [seq × vocab]
+pub fn lm_head_weight_grad(
+    x: &[Vec<f64>],
+    d_logits: &[Vec<f64>],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    if x.is_empty() || d_logits.is_empty() {
+        return Err("x and d_logits must be non-empty");
+    }
+    if x.len() != d_logits.len() {
+        return Err("x and d_logits must have the same number of rows");
+    }
+    matrix_matrix_mul(&transpose(x), d_logits)
 }
 
 #[cfg(test)]
