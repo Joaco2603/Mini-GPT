@@ -1,4 +1,5 @@
 pub mod backward;
+pub mod checkpoint;
 pub mod config;
 pub mod dataset;
 pub mod libs;
