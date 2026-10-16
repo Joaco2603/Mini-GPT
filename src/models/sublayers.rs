@@ -87,13 +87,20 @@ pub fn relu_derivative(x: f64) -> f64 {
     }
 }
 
-pub fn feed_forward(
+#[derive(Clone)]
+pub struct FeedForwardCache {
+    pub x: Vec<Vec<f64>>,
+    pub pre_relu: Vec<Vec<f64>>,
+    pub relu_out: Vec<Vec<f64>>,
+}
+
+pub fn feed_forward_with_cache(
     x: &[Vec<f64>],
     w1: &[Vec<f64>],
     b1: &[f64],
     w2: &[Vec<f64>],
     b2: &[f64],
-) -> Result<Vec<Vec<f64>>, &'static str> {
+) -> Result<(Vec<Vec<f64>>, FeedForwardCache), &'static str> {
     if x[0].len() != w1.len() {
         return Err("Invalid operations the arrays are of different sizes");
     }
@@ -108,8 +115,24 @@ pub fn feed_forward(
     }
 
     let x_w1 = matrix_matrix_mul(x, w1)?;
-    let x_w1_b1 = add_bias(&x_w1, b1)?;
-    let relu_out = relu_matrix(&x_w1_b1);
+    let pre_relu = add_bias(&x_w1, b1)?;
+    let relu_out = relu_matrix(&pre_relu);
     let relu_w2 = matrix_matrix_mul(&relu_out, w2)?;
-    add_bias(&relu_w2, b2)
+    let out = add_bias(&relu_w2, b2)?;
+    let cache = FeedForwardCache {
+        x: x.to_vec(),
+        pre_relu,
+        relu_out,
+    };
+    Ok((out, cache))
+}
+
+pub fn feed_forward(
+    x: &[Vec<f64>],
+    w1: &[Vec<f64>],
+    b1: &[f64],
+    w2: &[Vec<f64>],
+    b2: &[f64],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    feed_forward_with_cache(x, w1, b1, w2, b2).map(|(out, _)| out)
 }

@@ -18,12 +18,21 @@ pub fn concat_heads(head1: &[Vec<f64>], head2: &[Vec<f64>]) -> Vec<Vec<f64>> {
     output
 }
 
-pub fn attention_head(
+#[derive(Clone)]
+pub struct AttentionHeadCache {
+    pub q: Vec<Vec<f64>>,
+    pub k: Vec<Vec<f64>>,
+    pub v: Vec<Vec<f64>>,
+    pub attention_weights: Vec<Vec<f64>>,
+    pub scale: f64,
+}
+
+pub fn attention_head_with_cache(
     x: &[Vec<f64>],
     w_q: &[Vec<f64>],
     w_k: &[Vec<f64>],
     w_v: &[Vec<f64>],
-) -> Result<Vec<Vec<f64>>, &'static str> {
+) -> Result<(Vec<Vec<f64>>, AttentionHeadCache), &'static str> {
     let q = matrix_matrix_mul(x, w_q)?;
     let k = matrix_matrix_mul(x, w_k)?;
     let v = matrix_matrix_mul(x, w_v)?;
@@ -41,5 +50,22 @@ pub fn attention_head(
         attention_weights.push(softmax(row));
     }
 
-    matrix_matrix_mul(&attention_weights, &v)
+    let out = matrix_matrix_mul(&attention_weights, &v)?;
+    let cache = AttentionHeadCache {
+        q,
+        k,
+        v,
+        attention_weights,
+        scale,
+    };
+    Ok((out, cache))
+}
+
+pub fn attention_head(
+    x: &[Vec<f64>],
+    w_q: &[Vec<f64>],
+    w_k: &[Vec<f64>],
+    w_v: &[Vec<f64>],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    attention_head_with_cache(x, w_q, w_k, w_v).map(|(out, _)| out)
 }

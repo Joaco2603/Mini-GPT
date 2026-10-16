@@ -182,6 +182,31 @@ pub fn lm_head_weight_grad(
     matrix_matrix_mul(&transpose(x), d_logits)
 }
 
+/// `d_hidden = d_logits @ w_vocabᵀ`  →  `[seq × d_model]`
+pub fn lm_head_input_grad(
+    d_logits: &[Vec<f64>],
+    w_vocab: &[Vec<f64>],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    if d_logits.is_empty() || w_vocab.is_empty() {
+        return Err("d_logits and w_vocab must be non-empty");
+    }
+    matrix_matrix_mul(d_logits, &transpose(w_vocab))
+}
+
+pub fn sgd_update_vector(
+    weights: &mut [f64],
+    grads: &[f64],
+    lr: f64,
+) -> Result<(), &'static str> {
+    if weights.len() != grads.len() {
+        return Err("Weights and gradients must have the same length");
+    }
+    for (w, g) in weights.iter_mut().zip(grads.iter()) {
+        *w -= lr * g;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

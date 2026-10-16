@@ -3,13 +3,13 @@ use crate::libs::math::softmax;
 use crate::models::embeddings::{embedding_lookup, positional_encoding_matrix};
 use crate::models::transformer::{lm_head, stack_transformer_blocks, TransformerBlockParams};
 
-/// One forward pass: tokens → embeddings + positions → blocks → logits.
-pub fn forward_logits(
+/// Hidden states after the blocks `[seq × d_model]` and logits `[seq × vocab]`.
+pub fn forward_hidden_and_logits(
     token_ids: &[usize],
     embeddings: &[Vec<f64>],
     blocks: &[TransformerBlockParams],
     w_vocab: &[Vec<f64>],
-) -> Result<Vec<Vec<f64>>, &'static str> {
+) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>), &'static str> {
     if embeddings.is_empty() || embeddings[0].is_empty() {
         return Err("embeddings must be non-empty");
     }
@@ -18,7 +18,19 @@ pub fn forward_logits(
     let positions = positional_encoding_matrix(token_ids.len(), d_model);
     let with_positions = add_matriz(&token_embeddings, &positions)?;
     let stacked = stack_transformer_blocks(&with_positions, blocks)?;
-    lm_head(&stacked, w_vocab)
+    let logits = lm_head(&stacked, w_vocab)?;
+    Ok((stacked, logits))
+}
+
+/// One forward pass: tokens → embeddings + positions → blocks → logits.
+pub fn forward_logits(
+    token_ids: &[usize],
+    embeddings: &[Vec<f64>],
+    blocks: &[TransformerBlockParams],
+    w_vocab: &[Vec<f64>],
+) -> Result<Vec<Vec<f64>>, &'static str> {
+    let (_, logits) = forward_hidden_and_logits(token_ids, embeddings, blocks, w_vocab)?;
+    Ok(logits)
 }
 
 /// `logits`: [seq_len × vocab_size]
